@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="tubepilotaireact.client/tubepilotaireact.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="TubePilotAIReact.Server/TubePilotAIReact.Server.csproj" />
+</Solution>
