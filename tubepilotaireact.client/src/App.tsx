@@ -1,58 +1,58 @@
-import { useEffect, useState } from 'react';
 import './App.css';
+import { AISettingsPage } from './features/aiSettings/AISettingsPage';
+import { ContentGenerationPage } from './features/content/ContentGenerationPage';
+import { PromptTemplatesPage } from './features/promptTemplates/PromptTemplatesPage';
+import { ProjectsPage } from './features/projects/ProjectsPage';
+import { useState } from 'react';
 
-interface Forecast {
-    date: string;
-    temperatureC: number;
-    temperatureF: number;
-    summary: string;
-}
+type Module = 'projects' | 'promptTemplates' | 'aiSettings' | 'content';
 
 function App() {
-    const [forecasts, setForecasts] = useState<Forecast[]>();
+  const [activeModule, setActiveModule] = useState<Module>('projects');
 
-    useEffect(() => {
-        populateWeatherData();
-    }, []);
-
-    const contents = forecasts === undefined
-        ? <p><em>Loading... Please refresh once the ASP.NET backend has started. See <a href="https://aka.ms/jspsintegrationreact">https://aka.ms/jspsintegrationreact</a> for more details.</em></p>
-        : <table className="table table-striped" aria-labelledby="tableLabel">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
-                </tr>
-            </thead>
-            <tbody>
-                {forecasts.map(forecast =>
-                    <tr key={forecast.date}>
-                        <td>{forecast.date}</td>
-                        <td>{forecast.temperatureC}</td>
-                        <td>{forecast.temperatureF}</td>
-                        <td>{forecast.summary}</td>
-                    </tr>
-                )}
-            </tbody>
-        </table>;
-
-    return (
-        <div>
-            <h1 id="tableLabel">Weather forecast</h1>
-            <p>This component demonstrates fetching data from the server.</p>
-            {contents}
-        </div>
-    );
-
-    async function populateWeatherData() {
-        const response = await fetch('weatherforecast');
-        if (response.ok) {
-            const data = await response.json();
-            setForecasts(data);
-        }
-    }
+  return (
+    <>
+      <nav className="app-nav" aria-label="TubePilotAI modules">
+        <button
+          className={activeModule === 'projects' ? 'active' : ''}
+          type="button"
+          onClick={() => setActiveModule('projects')}
+        >
+          Projects
+        </button>
+        <button
+          className={activeModule === 'promptTemplates' ? 'active' : ''}
+          type="button"
+          onClick={() => setActiveModule('promptTemplates')}
+        >
+          Prompt Templates
+        </button>
+        <button
+          className={activeModule === 'aiSettings' ? 'active' : ''}
+          type="button"
+          onClick={() => setActiveModule('aiSettings')}
+        >
+          AI Settings
+        </button>
+        <button
+          className={activeModule === 'content' ? 'active' : ''}
+          type="button"
+          onClick={() => setActiveModule('content')}
+        >
+          Content Generation
+        </button>
+      </nav>
+      {activeModule === 'projects' ? (
+        <ProjectsPage />
+      ) : activeModule === 'promptTemplates' ? (
+        <PromptTemplatesPage />
+      ) : activeModule === 'aiSettings' ? (
+        <AISettingsPage />
+      ) : (
+        <ContentGenerationPage />
+      )}
+    </>
+  );
 }
 
 export default App;

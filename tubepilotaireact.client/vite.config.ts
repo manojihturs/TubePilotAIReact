@@ -8,9 +8,11 @@ import child_process from 'child_process';
 import { env } from 'process';
 
 const baseFolder =
-    env.APPDATA !== undefined && env.APPDATA !== ''
-        ? `${env.APPDATA}/ASP.NET/https`
-        : `${env.HOME}/.aspnet/https`;
+    env.TMP !== undefined && env.TMP !== ''
+            ? `${env.TMP}/aspnet-https`
+            : env.APPDATA !== undefined && env.APPDATA !== ''
+                ? `${env.APPDATA}/ASP.NET/https`
+            : `${env.HOME}/.aspnet/https`;
 
 const certificateName = "tubepilotaireact.client";
 const certFilePath = path.join(baseFolder, `${certificateName}.pem`);
@@ -34,8 +36,25 @@ if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
     }
 }
 
-const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}` :
-    env.ASPNETCORE_URLS ? env.ASPNETCORE_URLS.split(';')[0] : 'https://localhost:7086';
+// Determine the backend target URL from environment variables
+const target = (() => {
+    // Check for ASPNETCORE_URLS first (can contain multiple URLs)
+    if (env.ASPNETCORE_URLS) {
+        const urls = env.ASPNETCORE_URLS.split(';');
+        // Prefer HTTP for development
+        const httpUrl = urls.find(url => url.startsWith('http://'));
+        if (httpUrl) return httpUrl.trim();
+        return urls[0].trim();
+    }
+    // Check for ASPNETCORE_HTTPS_PORT
+    if (env.ASPNETCORE_HTTPS_PORT) {
+        return `https://localhost:${env.ASPNETCORE_HTTPS_PORT}`;
+    }
+    // Default fallback
+    return 'http://localhost:5000';
+})();
+
+console.log(`Vite proxy configured to: ${target}`);
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -47,9 +66,10 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '^/weatherforecast': {
+            '^/api': {
                 target,
-                secure: false
+                secure: false,
+                changeOrigin: false
             }
         },
         port: parseInt(env.DEV_SERVER_PORT || '49153'),

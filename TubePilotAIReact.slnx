@@ -3,5 +3,8 @@
     <Build />
     <Deploy />
   </Project>
+  <Project Path="TubePilotAI.Domain/TubePilotAI.Domain.csproj" />
+  <Project Path="TubePilotAI.Application/TubePilotAI.Application.csproj" />
+  <Project Path="TubePilotAI.Infrastructure/TubePilotAI.Infrastructure.csproj" />
   <Project Path="TubePilotAIReact.Server/TubePilotAIReact.Server.csproj" />
 </Solution>
