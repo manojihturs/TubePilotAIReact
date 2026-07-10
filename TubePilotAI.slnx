@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="src/TubePilot.Domain/TubePilot.Domain.csproj" />
+  <Project Path="src/TubePilot.Application/TubePilot.Application.csproj" />
+  <Project Path="src/TubePilot.Infrastructure/TubePilot.Infrastructure.csproj" />
+  <Project Path="src/TubePilot.API/TubePilot.API.csproj" />
+  <Project Path="tests/TubePilot.Infrastructure.Tests/TubePilot.Infrastructure.Tests.csproj" />
+  <Project Path="tubepilotaireact.client/tubepilotaireact.client.esproj" />
+</Solution>

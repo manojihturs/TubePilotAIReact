@@ -1,58 +1,51 @@
-import { useEffect, useState } from 'react';
-import './App.css';
-
-interface Forecast {
-    date: string;
-    temperatureC: number;
-    temperatureF: number;
-    summary: string;
-}
+import { Routes, Route, Outlet } from 'react-router-dom';
+import { Sidebar } from './components/Sidebar';
+import { TopNav } from './components/TopNav';
+import Dashboard from './pages/Dashboard';
+import { PromptCategoriesPage } from './pages/PromptCategoriesPage';
+import { PromptsPage } from './pages/PromptsPage';
+import { PromptVariablesPage } from './pages/PromptVariablesPage';
+import { LoginPage } from './pages/LoginPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
-    const [forecasts, setForecasts] = useState<Forecast[]>();
+  const { isLoading } = useAuth();
 
-    useEffect(() => {
-        populateWeatherData();
-    }, []);
-
-    const contents = forecasts === undefined
-        ? <p><em>Loading... Please refresh once the ASP.NET backend has started. See <a href="https://aka.ms/jspsintegrationreact">https://aka.ms/jspsintegrationreact</a> for more details.</em></p>
-        : <table className="table table-striped" aria-labelledby="tableLabel">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Temp. (C)</th>
-                    <th>Temp. (F)</th>
-                    <th>Summary</th>
-                </tr>
-            </thead>
-            <tbody>
-                {forecasts.map(forecast =>
-                    <tr key={forecast.date}>
-                        <td>{forecast.date}</td>
-                        <td>{forecast.temperatureC}</td>
-                        <td>{forecast.temperatureF}</td>
-                        <td>{forecast.summary}</td>
-                    </tr>
-                )}
-            </tbody>
-        </table>;
-
+  if (isLoading) {
     return (
-        <div>
-            <h1 id="tableLabel">Weather forecast</h1>
-            <p>This component demonstrates fetching data from the server.</p>
-            {contents}
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
     );
+  }
 
-    async function populateWeatherData() {
-        const response = await fetch('weatherforecast');
-        if (response.ok) {
-            const data = await response.json();
-            setForecasts(data);
-        }
-    }
+  const AppLayout = () => (
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <TopNav />
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/prompt-categories" element={<PromptCategoriesPage />} />
+          <Route path="/prompts" element={<PromptsPage />} />
+          <Route path="/prompt-variables" element={<PromptVariablesPage />} />
+        </Route>
+      </Route>
+    </Routes>
+  );
 }
 
 export default App;
+

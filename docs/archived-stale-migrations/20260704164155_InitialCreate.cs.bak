@@ -1,0 +1,136 @@
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
+namespace TubePilotAIReact.Server.TubePilotAIReact.Server.Data.Migrations
+{
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "PromptCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PromptCategories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Prompts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Content = table.Column<string>(type: "TEXT", nullable: false),
+                    CategoryId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Prompts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Prompts_PromptCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "PromptCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PromptVariables",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    PromptId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    DefaultValue = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PromptVariables", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PromptVariables_Prompts_PromptId",
+                        column: x => x.PromptId,
+                        principalTable: "Prompts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.InsertData(
+                table: "PromptCategories",
+                columns: new[] { "Id", "CreatedAt", "Description", "Name", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(2862), "Prompts for YouTube video content", "YouTube Video", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(2877) },
+                    { 2, new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(3624), "Prompts for Instagram short videos", "Instagram Reels", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(3625) },
+                    { 3, new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(3628), "Prompts for TikTok content", "TikTok", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(3629) },
+                    { 4, new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(3631), "Prompts for Twitter posts", "Twitter/X", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(3631) }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Prompts",
+                columns: new[] { "Id", "CategoryId", "Content", "CreatedAt", "Title", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, 1, "Generate an engaging YouTube video title about {topic} that includes keywords for SEO.", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(8758), "Video Title Generator", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(8759) },
+                    { 2, 2, "Create a catchy and engaging Instagram Reel caption for a video about {content_type} with emojis.", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(9873), "Reel Caption Creator", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(9873) },
+                    { 3, 3, "Write a short 30-second TikTok script about {topic} that's viral-worthy and trend-focused.", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(9877), "TikTok Script", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(9878) },
+                    { 4, 4, "Generate a Twitter post about {topic} with relevant hashtags and engaging call-to-action.", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(9881), "Tweet Creator", new DateTime(2026, 7, 4, 16, 41, 48, 859, DateTimeKind.Utc).AddTicks(9881) }
+                });
+
+            migrationBuilder.InsertData(
+                table: "PromptVariables",
+                columns: new[] { "Id", "CreatedAt", "DefaultValue", "Description", "Name", "PromptId", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(1591), "AI and Tech", "The topic of the video", "topic", 1, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(1592) },
+                    { 2, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(2481), "Travel", "Type of content", "content_type", 2, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(2482) },
+                    { 3, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(2484), "Dance Challenge", "Trending topic", "topic", 3, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(2485) },
+                    { 4, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(2487), "Technology News", "Topic to tweet about", "topic", 4, new DateTime(2026, 7, 4, 16, 41, 48, 860, DateTimeKind.Utc).AddTicks(2488) }
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Prompts_CategoryId",
+                table: "Prompts",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PromptVariables_PromptId",
+                table: "PromptVariables",
+                column: "PromptId");
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "PromptVariables");
+
+            migrationBuilder.DropTable(
+                name: "Prompts");
+
+            migrationBuilder.DropTable(
+                name: "PromptCategories");
+        }
+    }
+}
