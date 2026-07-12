@@ -118,8 +118,6 @@ namespace TubePilot.Infrastructure.Services.Video
             Directory.CreateDirectory(outputDir);
 
             var (width, height) = format == RenderFormat.Shorts ? (1080, 1920) : (1920, 1080);
-            var cappedDuration = format == RenderFormat.Shorts ? Math.Min(durationSeconds, 60) : durationSeconds;
-            var perSceneDuration = Math.Max(1.5, (double)cappedDuration / sceneImagePaths.Count);
 
             var audioPath = Path.Combine(outputDir, "narration.mp3");
             await File.WriteAllBytesAsync(audioPath, narrationAudio, cancellationToken);
