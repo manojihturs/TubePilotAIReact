@@ -9,6 +9,7 @@ namespace TubePilot.Domain.Entities
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
         public string PromptText { get; set; } = null!;
+        public string? OutputSpecJson { get; set; }
         public double? Temperature { get; set; }
         public double? TopP { get; set; }
         public int? MaxTokens { get; set; }

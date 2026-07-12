@@ -5,6 +5,10 @@ import Dashboard from './pages/Dashboard';
 import { PromptCategoriesPage } from './pages/PromptCategoriesPage';
 import { PromptsPage } from './pages/PromptsPage';
 import { PromptVariablesPage } from './pages/PromptVariablesPage';
+import { ApiKeysPage } from './pages/ApiKeysPage';
+import { GeneratePage } from './pages/GeneratePage';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
@@ -14,14 +18,14 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center w-full h-screen">
         <div className="text-xl">Loading...</div>
       </div>
     );
   }
 
   const AppLayout = () => (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex w-full h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopNav />
@@ -41,6 +45,10 @@ function App() {
           <Route path="/prompt-categories" element={<PromptCategoriesPage />} />
           <Route path="/prompts" element={<PromptsPage />} />
           <Route path="/prompt-variables" element={<PromptVariablesPage />} />
+          <Route path="/api-keys" element={<ApiKeysPage />} />
+          <Route path="/generate" element={<GeneratePage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:id" element={<ProjectDetailPage />} />
         </Route>
       </Route>
     </Routes>

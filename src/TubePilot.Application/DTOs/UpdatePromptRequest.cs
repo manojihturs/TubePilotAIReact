@@ -16,6 +16,7 @@ namespace TubePilot.Application.DTOs
         public string? Description { get; set; }
         [Required]
         public string PromptText { get; set; } = null!;
+        public string? OutputSpecJson { get; set; }
         public double? Temperature { get; set; }
         public double? TopP { get; set; }
         public int? MaxTokens { get; set; }

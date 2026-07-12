@@ -14,6 +14,9 @@ namespace TubePilot.Application.DTOs
         public string? Description { get; set; }
         [Required]
         public string PromptText { get; set; } = null!;
+        // Declares this prompt's own output shape (Table/Text/ImageSet items, columns, folder names).
+        // Optional — a prompt without one falls back to a generic single-Text output.
+        public string? OutputSpecJson { get; set; }
         public double? Temperature { get; set; }
         public double? TopP { get; set; }
         public int? MaxTokens { get; set; }

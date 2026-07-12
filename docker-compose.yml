@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: tubepilot-postgres
+    environment:
+      POSTGRES_USER: tubepilot
+      POSTGRES_PASSWORD: tubepilot_dev_password
+      POSTGRES_DB: TubePilotAIReact
+    ports:
+      - "5432:5432"
+    volumes:
+      - tubepilot-pgdata:/var/lib/postgresql/data
+
+volumes:
+  tubepilot-pgdata:

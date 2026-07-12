@@ -8,6 +8,9 @@ import {
   Menu,
   X,
   ChevronDown,
+  Sparkles,
+  KeyRound,
+  Clapperboard,
 } from 'lucide-react';
 
 interface NavItem {
@@ -23,6 +26,11 @@ const navItems: NavItem[] = [
     label: 'Dashboard',
     path: '/',
     icon: LayoutDashboard,
+  },
+  {
+    label: 'Projects',
+    path: '/projects',
+    icon: Clapperboard,
   },
   {
     label: 'Content Management',
@@ -42,6 +50,22 @@ const navItems: NavItem[] = [
         label: 'Variables',
         path: '/prompt-variables',
         icon: Code,
+      },
+    ],
+  },
+  {
+    label: 'AI Generation',
+    icon: Sparkles,
+    submenu: [
+      {
+        label: 'Generate',
+        path: '/generate',
+        icon: Sparkles,
+      },
+      {
+        label: 'API Keys',
+        path: '/api-keys',
+        icon: KeyRound,
       },
     ],
   },
@@ -75,8 +99,8 @@ export function Sidebar() {
       'flex items-center justify-between px-4 py-3 rounded-lg transition-colors group relative';
 
     const activeClasses = active
-      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800';
+      ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-semibold shadow-sm ring-1 ring-indigo-100 dark:ring-indigo-500/20'
+      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60';
 
     if (hasSubmenu) {
       return (
@@ -96,7 +120,7 @@ export function Sidebar() {
           </button>
 
           {expandedMenu === item.label && (
-            <div className="ml-4 mt-2 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
+            <div className="ml-4 mt-2 space-y-1 border-l-2 border-slate-200 dark:border-slate-700 pl-2">
               {item.submenu?.map((subitem) => (
                 <Link
                   key={subitem.label}
@@ -104,8 +128,8 @@ export function Sidebar() {
                   onClick={() => setIsOpen(false)}
                   className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
                     isActive(subitem.path)
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   {subitem.icon && <subitem.icon size={16} />}
@@ -142,7 +166,7 @@ export function Sidebar() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 lg:hidden"
+        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 lg:hidden"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -151,18 +175,20 @@ export function Sidebar() {
       <aside
         className={`${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:relative top-0 left-0 z-40 w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 overflow-y-auto`}
+        } lg:translate-x-0 fixed lg:relative top-0 left-0 z-40 w-64 h-screen bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 overflow-y-auto`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-gray-200 dark:border-gray-800">
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl text-gray-900 dark:text-white">
-            <LayoutDashboard size={24} className="text-blue-600" />
+        <div className="h-16 flex items-center px-4 border-b border-slate-200 dark:border-slate-800">
+          <Link to="/" className="flex items-center gap-2.5 font-bold text-lg text-slate-900 dark:text-white">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm shadow-indigo-600/20">
+              <LayoutDashboard size={18} className="text-white" />
+            </div>
             TubePilot
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-3 space-y-1">
           {navItems.map((item) => (
             <div key={item.label}>
               <NavItemComponent item={item} />
@@ -171,8 +197,8 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-          <p className="text-xs text-gray-600 dark:text-gray-400">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             © 2024 TubePilot. All rights reserved.
           </p>
         </div>

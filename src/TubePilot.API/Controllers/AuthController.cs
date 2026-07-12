@@ -25,6 +25,28 @@ namespace TubePilot.API.Controllers
             _jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>()!;
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] AuthRequest req)
+        {
+            var existing = await _userRepository.GetByEmailAsync(req.Email);
+            if (existing != null)
+            {
+                return Conflict(new { message = "A user with this email already exists" });
+            }
+
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = req.Email,
+                Password = req.Password,
+                Role = "User"
+            };
+            await _userRepository.AddAsync(user);
+            await _userRepository.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Me), null, new UserDto { Id = user.Id, Email = user.Email, Role = user.Role });
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] AuthRequest req)
         {

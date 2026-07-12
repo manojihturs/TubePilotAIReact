@@ -41,7 +41,7 @@ const target = env.ASPNETCORE_HTTPS_PORT
     ? `https://localhost:${env.ASPNETCORE_HTTPS_PORT}`
     : env.ASPNETCORE_URLS
         ? env.ASPNETCORE_URLS.split(';')[0]
-        : 'https://localhost:5286';
+        : 'http://localhost:5080';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -53,17 +53,14 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '^/api': {
+            '^/api(/|$)': {
                 target,
                 secure: false,
                 changeOrigin: true,
                 // ASP.NET controllers use [Route("api/[controller]")], so keep the /api prefix.
+                // Match /api or /api/... only — NOT client routes like /api-keys.
             }
         },
         port: parseInt(env.DEV_SERVER_PORT || '49153'),
-        https: {
-            key: fs.readFileSync(keyFilePath),
-            cert: fs.readFileSync(certFilePath),
-        }
     }
 })

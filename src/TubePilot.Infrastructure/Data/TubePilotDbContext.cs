@@ -13,12 +13,13 @@ namespace TubePilot.Infrastructure.Data
         public DbSet<TubePilot.Domain.Entities.PromptCategory> PromptCategories => Set<TubePilot.Domain.Entities.PromptCategory>();
         public DbSet<TubePilot.Domain.Entities.Prompt> Prompts => Set<TubePilot.Domain.Entities.Prompt>();
         public DbSet<TubePilot.Domain.Entities.PromptVariable> PromptVariables => Set<TubePilot.Domain.Entities.PromptVariable>();
-        public DbSet<TubePilot.Domain.Entities.AIProvider> AIProviders => Set<TubePilot.Domain.Entities.AIProvider>();
-        public DbSet<TubePilot.Domain.Entities.AIModel> AIModels => Set<TubePilot.Domain.Entities.AIModel>();
-        public DbSet<TubePilot.Domain.Entities.PromptExecution> PromptExecutions => Set<TubePilot.Domain.Entities.PromptExecution>();
-        public DbSet<TubePilot.Domain.Entities.Workflow> Workflows => Set<TubePilot.Domain.Entities.Workflow>();
-        public DbSet<TubePilot.Domain.Entities.WorkflowStep> WorkflowSteps => Set<TubePilot.Domain.Entities.WorkflowStep>();
-        public DbSet<TubePilot.Domain.Entities.WorkflowExecution> WorkflowExecutions => Set<TubePilot.Domain.Entities.WorkflowExecution>();
+        public DbSet<TubePilot.Domain.Entities.UserApiKey> UserApiKeys => Set<TubePilot.Domain.Entities.UserApiKey>();
+        public DbSet<TubePilot.Domain.Entities.Project> Projects => Set<TubePilot.Domain.Entities.Project>();
+        public DbSet<TubePilot.Domain.Entities.PromptVersion> PromptVersions => Set<TubePilot.Domain.Entities.PromptVersion>();
+        public DbSet<TubePilot.Domain.Entities.ProjectOutput> ProjectOutputs => Set<TubePilot.Domain.Entities.ProjectOutput>();
+        public DbSet<TubePilot.Domain.Entities.DataRow> DataRows => Set<TubePilot.Domain.Entities.DataRow>();
+        public DbSet<TubePilot.Domain.Entities.GenerationRecord> GenerationRecords => Set<TubePilot.Domain.Entities.GenerationRecord>();
+        public DbSet<TubePilot.Domain.Entities.RenderJob> RenderJobs => Set<TubePilot.Domain.Entities.RenderJob>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -38,16 +39,13 @@ namespace TubePilot.Infrastructure.Data
             modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.PromptConfiguration());
             // Apply PromptVariable configuration
             modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.PromptVariableConfiguration());
-            // Apply AIProvider configuration
-            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.AIProviderConfiguration());
-            // Apply AIModel configuration
-            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.AIModelConfiguration());
-            // Apply PromptExecution configuration
-            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.PromptExecutionConfiguration());
-            // Apply Workflow configurations
-            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.WorkflowConfiguration());
-            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.WorkflowStepConfiguration());
-            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.WorkflowExecutionConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.UserApiKeyConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.ProjectConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.PromptVersionConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.ProjectOutputConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.DataRowConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.GenerationRecordConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.RenderJobConfiguration());
         }
     }
 }

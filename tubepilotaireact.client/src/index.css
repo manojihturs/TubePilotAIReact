@@ -1,31 +1,35 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: toggled by adding/removing `dark` on <html>,
+   controlled by ThemeContext instead of relying solely on OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Theme tokens — keeps the custom palette available as Tailwind utilities
    (e.g. bg-primary, text-accent) consistent with the v3 tailwind.config.js. */
 @theme {
-  --color-primary: #2563EB;
-  --color-secondary: #6366F1;
-  --color-accent: #06B6D4;
+  --color-primary: #4F46E5;
+  --color-secondary: #6D28D9;
+  --color-accent: #0EA5E9;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
 }
 
 /* Premium SaaS Design System */
 :root {
   /* Colors */
-  --primary: #2563EB;
-  --secondary: #6366F1;
-  --accent: #06B6D4;
-  --success: #22C55E;
-  --warning: #F59E0B;
-  --danger: #EF4444;
+  --primary: #4F46E5;
+  --secondary: #6D28D9;
+  --accent: #0EA5E9;
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger: #DC2626;
   --bg: #F8FAFC;
   --bg-dark: #0F172A;
-  --text: #111827;
-  --text-muted: #6B7280;
-  --border: #E5E7EB;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --border: #E2E8F0;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.08), 0 4px 6px rgba(15, 23, 42, 0.05);
 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   font-size: 16px;
@@ -35,43 +39,42 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111827;
-    --bg-dark: #030712;
-    --text: #F3F4F6;
-    --text-muted: #9CA3AF;
-    --border: #374151;
+:root.dark {
+  --bg: #0F172A;
+  --bg-dark: #020617;
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --border: #1E293B;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
   }
-}
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
+  body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-body {
-  margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  #root {
+    display: flex;
+  }
 
-#root {
-  display: flex;
+  h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+  h2 { font-size: 1.875rem; font-weight: 700; margin: 0 0 0.5rem; }
+  h3 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
+  h4 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.25rem; }
+  p { margin: 0 0 1rem; }
+  button { cursor: pointer; }
 }
-
-h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
-h2 { font-size: 1.875rem; font-weight: 700; margin: 0 0 0.5rem; }
-h3 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
-h4 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.25rem; }
-p { margin: 0 0 1rem; }
-button { cursor: pointer; }
 

@@ -1,29 +1,33 @@
 import { apiClient } from './api';
 
 export interface PromptVariable {
-  id: number;
+  id: string;
   name: string;
-  promptId: number;
-  variableType: string;
+  promptId: string;
+  placeholder: string;
+  dataType?: string;
+  description?: string;
   defaultValue?: string;
   isRequired?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  createdDate?: string;
+  updatedDate?: string;
 }
 
 export interface CreatePromptVariableDto {
   name: string;
-  promptId: number;
-  variableType: string;
+  promptId: string;
+  placeholder: string;
+  dataType?: string;
   defaultValue?: string;
   isRequired?: boolean;
 }
 
 export interface UpdatePromptVariableDto {
-  id: number;
+  id: string;
   name: string;
-  promptId: number;
-  variableType: string;
+  promptId: string;
+  placeholder: string;
+  dataType?: string;
   defaultValue?: string;
   isRequired?: boolean;
 }
@@ -36,7 +40,7 @@ class PromptVariableService {
   }
 
   // Get variables by prompt
-  async getByPrompt(promptId: number): Promise<PromptVariable[]> {
+  async getByPrompt(promptId: string): Promise<PromptVariable[]> {
     const response = await apiClient.get<PromptVariable[]>('/promptvariables', {
       params: { promptId },
     });
@@ -44,7 +48,7 @@ class PromptVariableService {
   }
 
   // Get single variable
-  async getById(id: number): Promise<PromptVariable> {
+  async getById(id: string): Promise<PromptVariable> {
     const response = await apiClient.get<PromptVariable>(`/promptvariables/${id}`);
     return response.data;
   }
@@ -56,13 +60,13 @@ class PromptVariableService {
   }
 
   // Update variable
-  async update(id: number, data: UpdatePromptVariableDto): Promise<PromptVariable> {
+  async update(id: string, data: UpdatePromptVariableDto): Promise<PromptVariable> {
     const response = await apiClient.put<PromptVariable>(`/promptvariables/${id}`, data);
     return response.data;
   }
 
   // Delete variable
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await apiClient.delete(`/promptvariables/${id}`);
   }
 }

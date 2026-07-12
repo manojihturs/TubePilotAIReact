@@ -2,26 +2,26 @@ import { apiClient } from './api';
 import type { PromptCategory } from './promptCategoryService';
 
 export interface Prompt {
-  id: number;
-  title: string;
-  content: string;
-  categoryId: number;
+  id: string;
+  name: string;
+  promptText: string;
+  categoryId: string;
   category?: PromptCategory;
-  createdAt?: string;
-  updatedAt?: string;
+  createdDate?: string;
+  updatedDate?: string;
 }
 
 export interface CreatePromptDto {
-  title: string;
-  content: string;
-  categoryId: number;
+  name: string;
+  promptText: string;
+  categoryId: string;
 }
 
 export interface UpdatePromptDto {
-  id: number;
-  title: string;
-  content: string;
-  categoryId: number;
+  id: string;
+  name: string;
+  promptText: string;
+  categoryId: string;
 }
 
 class PromptService {
@@ -32,7 +32,7 @@ class PromptService {
   }
 
   // Get prompts by category
-  async getByCategory(categoryId: number): Promise<Prompt[]> {
+  async getByCategory(categoryId: string): Promise<Prompt[]> {
     const response = await apiClient.get<Prompt[]>('/prompts', {
       params: { categoryId },
     });
@@ -40,7 +40,7 @@ class PromptService {
   }
 
   // Get single prompt
-  async getById(id: number): Promise<Prompt> {
+  async getById(id: string): Promise<Prompt> {
     const response = await apiClient.get<Prompt>(`/prompts/${id}`);
     return response.data;
   }
@@ -52,18 +52,18 @@ class PromptService {
   }
 
   // Update prompt
-  async update(id: number, data: UpdatePromptDto): Promise<Prompt> {
+  async update(id: string, data: UpdatePromptDto): Promise<Prompt> {
     const response = await apiClient.put<Prompt>(`/prompts/${id}`, data);
     return response.data;
   }
 
   // Delete prompt
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await apiClient.delete(`/prompts/${id}`);
   }
 
   // Duplicate prompt
-  async duplicate(id: number): Promise<Prompt> {
+  async duplicate(id: string): Promise<Prompt> {
     const response = await apiClient.post<Prompt>(`/prompts/${id}/duplicate`);
     return response.data;
   }

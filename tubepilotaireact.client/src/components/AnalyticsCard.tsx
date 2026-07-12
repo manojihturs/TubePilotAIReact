@@ -31,7 +31,7 @@ export function AnalyticsCard({
       case 'down':
         return 'text-red-600 dark:text-red-400';
       default:
-        return 'text-gray-600 dark:text-gray-400';
+        return 'text-slate-600 dark:text-slate-400';
     }
   };
 
@@ -43,7 +43,7 @@ export function AnalyticsCard({
       case 'down':
         return 'bg-red-50 dark:bg-red-900/20';
       default:
-        return 'bg-gray-50 dark:bg-gray-800/20';
+        return 'bg-slate-50 dark:bg-slate-800/20';
     }
   };
 
@@ -52,28 +52,28 @@ export function AnalyticsCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 hover:shadow-lg transition-all duration-200 ${
+      className={`bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 hover:shadow-lg transition-all duration-200 ${
         onClick ? 'cursor-pointer hover:scale-105' : ''
       } ${className}`}
     >
       {/* Header with icon */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
             {label}
           </p>
-          <h3 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+          <h3 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">
             {value}
           </h3>
         </div>
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <Icon size={24} className="text-blue-600 dark:text-blue-400" />
+        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+          <Icon size={24} className="text-indigo-600 dark:text-indigo-400" />
         </div>
       </div>
 
       {/* Description */}
       {description && (
-        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">
+        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mb-3">
           {description}
         </p>
       )}

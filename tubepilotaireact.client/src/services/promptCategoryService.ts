@@ -1,7 +1,7 @@
 import { apiClient } from './api';
 
 export interface PromptCategory {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   createdAt?: string;
@@ -14,7 +14,7 @@ export interface CreatePromptCategoryDto {
 }
 
 export interface UpdatePromptCategoryDto {
-  id: number;
+  id: string;
   name: string;
   description?: string;
 }
@@ -27,7 +27,7 @@ class PromptCategoryService {
   }
 
   // Get single category
-  async getById(id: number): Promise<PromptCategory> {
+  async getById(id: string): Promise<PromptCategory> {
     const response = await apiClient.get<PromptCategory>(`/promptcategories/${id}`);
     return response.data;
   }
@@ -39,13 +39,13 @@ class PromptCategoryService {
   }
 
   // Update category
-  async update(id: number, data: UpdatePromptCategoryDto): Promise<PromptCategory> {
+  async update(id: string, data: UpdatePromptCategoryDto): Promise<PromptCategory> {
     const response = await apiClient.put<PromptCategory>(`/promptcategories/${id}`, data);
     return response.data;
   }
 
   // Delete category
-  async delete(id: number): Promise<void> {
+  async delete(id: string): Promise<void> {
     await apiClient.delete(`/promptcategories/${id}`);
   }
 }

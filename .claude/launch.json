@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tubepilot-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "tubepilotaireact.client",
+      "port": 49153,
+      "env": {
+        "ASPNETCORE_HTTPS_PORT": "57510"
+      }
+    }
+  ]
+}

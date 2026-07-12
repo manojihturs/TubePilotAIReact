@@ -1,6 +1,0 @@
-@TubePilotAIReact.Server_HostAddress = http://localhost:5285
-
-GET {{TubePilotAIReact.Server_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

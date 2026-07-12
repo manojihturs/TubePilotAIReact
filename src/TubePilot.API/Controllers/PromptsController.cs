@@ -12,10 +12,12 @@ namespace TubePilot.API.Controllers
     public class PromptsController : ControllerBase
     {
         private readonly IPromptRepository _repo;
+        private readonly IPromptVersionRepository _versionRepo;
 
-        public PromptsController(IPromptRepository repo)
+        public PromptsController(IPromptRepository repo, IPromptVersionRepository versionRepo)
         {
             _repo = repo;
+            _versionRepo = versionRepo;
         }
 
         [HttpGet]
@@ -23,28 +25,7 @@ namespace TubePilot.API.Controllers
         {
             var desc = string.Equals(sortDir, "desc", StringComparison.OrdinalIgnoreCase);
             var (items, total) = await _repo.GetPagedAsync(page, pageSize, categoryId, search, sortBy, desc);
-            var dtos = items.Select(i => new PromptDto
-            {
-                Id = i.Id,
-                CategoryId = i.CategoryId,
-                Name = i.Name,
-                Description = i.Description,
-                PromptText = i.PromptText,
-                Temperature = i.Temperature,
-                TopP = i.TopP,
-                MaxTokens = i.MaxTokens,
-                Model = i.Model,
-                Provider = i.Provider,
-                Version = i.Version,
-                Status = i.Status,
-                Tags = i.Tags,
-                IsSystem = i.IsSystem,
-                IsPublic = i.IsPublic,
-                CreatedBy = i.CreatedBy,
-                UpdatedBy = i.UpdatedBy,
-                CreatedDate = i.CreatedDate,
-                UpdatedDate = i.UpdatedDate
-            }).ToList();
+            var dtos = items.Select(ToDto).ToList();
 
             var meta = new PaginationMeta
             {
@@ -62,29 +43,22 @@ namespace TubePilot.API.Controllers
         {
             var item = await _repo.GetByIdAsync(id);
             if (item == null) return NotFound(new ApiResponse<string> { Success = false, Message = "Not found" });
-            var dto = new PromptDto
+            return Ok(new ApiResponse<PromptDto> { Success = true, Data = ToDto(item) });
+        }
+
+        [HttpGet("{id:guid}/versions")]
+        public async Task<IActionResult> GetVersions(Guid id)
+        {
+            var versions = await _versionRepo.GetForPromptAsync(id);
+            var dtos = versions.Select(v => new PromptVersionDto
             {
-                Id = item.Id,
-                CategoryId = item.CategoryId,
-                Name = item.Name,
-                Description = item.Description,
-                PromptText = item.PromptText,
-                Temperature = item.Temperature,
-                TopP = item.TopP,
-                MaxTokens = item.MaxTokens,
-                Model = item.Model,
-                Provider = item.Provider,
-                Version = item.Version,
-                Status = item.Status,
-                Tags = item.Tags,
-                IsSystem = item.IsSystem,
-                IsPublic = item.IsPublic,
-                CreatedBy = item.CreatedBy,
-                UpdatedBy = item.UpdatedBy,
-                CreatedDate = item.CreatedDate,
-                UpdatedDate = item.UpdatedDate
-            };
-            return Ok(new ApiResponse<PromptDto> { Success = true, Data = dto });
+                Id = v.Id,
+                VersionNumber = v.VersionNumber,
+                TemplateText = v.TemplateText,
+                OutputSpecJson = v.OutputSpecJson,
+                CreatedAt = v.CreatedAt
+            });
+            return Ok(new ApiResponse<IEnumerable<PromptVersionDto>> { Success = true, Data = dtos });
         }
 
         [HttpPost]
@@ -99,6 +73,7 @@ namespace TubePilot.API.Controllers
                 Name = req.Name,
                 Description = req.Description,
                 PromptText = req.PromptText,
+                OutputSpecJson = req.OutputSpecJson,
                 Temperature = req.Temperature,
                 TopP = req.TopP,
                 MaxTokens = req.MaxTokens,
@@ -114,27 +89,17 @@ namespace TubePilot.API.Controllers
             };
             await _repo.AddAsync(entity);
             await _repo.SaveChangesAsync();
-            var dto = new PromptDto
+
+            // First version, append-only from day one.
+            await _versionRepo.AddAsync(new PromptVersion
             {
-                Id = entity.Id,
-                CategoryId = entity.CategoryId,
-                Name = entity.Name,
-                Description = entity.Description,
-                PromptText = entity.PromptText,
-                Temperature = entity.Temperature,
-                TopP = entity.TopP,
-                MaxTokens = entity.MaxTokens,
-                Model = entity.Model,
-                Provider = entity.Provider,
-                Version = entity.Version,
-                Status = entity.Status,
-                Tags = entity.Tags,
-                IsSystem = entity.IsSystem,
-                IsPublic = entity.IsPublic,
-                CreatedBy = entity.CreatedBy,
-                CreatedDate = entity.CreatedDate
-            };
-            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, new ApiResponse<PromptDto> { Success = true, Data = dto });
+                PromptId = entity.Id,
+                VersionNumber = 1,
+                TemplateText = entity.PromptText,
+                OutputSpecJson = entity.OutputSpecJson
+            });
+
+            return CreatedAtAction(nameof(GetById), new { id = entity.Id }, new ApiResponse<PromptDto> { Success = true, Data = ToDto(entity) });
         }
 
         [HttpPut("{id:guid}")]
@@ -147,10 +112,13 @@ namespace TubePilot.API.Controllers
 
             var userEmail = User?.FindFirst(ClaimTypes.Email)?.Value ?? User?.Identity?.Name ?? "system";
 
+            var contentChanged = existing.PromptText != req.PromptText || existing.OutputSpecJson != req.OutputSpecJson;
+
             existing.CategoryId = req.CategoryId;
             existing.Name = req.Name;
             existing.Description = req.Description;
             existing.PromptText = req.PromptText;
+            existing.OutputSpecJson = req.OutputSpecJson;
             existing.Temperature = req.Temperature;
             existing.TopP = req.TopP;
             existing.MaxTokens = req.MaxTokens;
@@ -166,6 +134,21 @@ namespace TubePilot.API.Controllers
 
             await _repo.UpdateAsync(existing);
             await _repo.SaveChangesAsync();
+
+            // The prompt text or its declared output shape changed — that's as significant
+            // a change as the text itself, so it gets its own version, never overwritten in place.
+            if (contentChanged)
+            {
+                var nextVersion = await _versionRepo.GetLatestVersionNumberAsync(id) + 1;
+                await _versionRepo.AddAsync(new PromptVersion
+                {
+                    PromptId = id,
+                    VersionNumber = nextVersion,
+                    TemplateText = existing.PromptText,
+                    OutputSpecJson = existing.OutputSpecJson
+                });
+            }
+
             return NoContent();
         }
 
@@ -179,5 +162,29 @@ namespace TubePilot.API.Controllers
             await _repo.SaveChangesAsync();
             return NoContent();
         }
+
+        private static PromptDto ToDto(Prompt i) => new()
+        {
+            Id = i.Id,
+            CategoryId = i.CategoryId,
+            Name = i.Name,
+            Description = i.Description,
+            PromptText = i.PromptText,
+            OutputSpecJson = i.OutputSpecJson,
+            Temperature = i.Temperature,
+            TopP = i.TopP,
+            MaxTokens = i.MaxTokens,
+            Model = i.Model,
+            Provider = i.Provider,
+            Version = i.Version,
+            Status = i.Status,
+            Tags = i.Tags,
+            IsSystem = i.IsSystem,
+            IsPublic = i.IsPublic,
+            CreatedBy = i.CreatedBy,
+            UpdatedBy = i.UpdatedBy,
+            CreatedDate = i.CreatedDate,
+            UpdatedDate = i.UpdatedDate
+        };
     }
 }

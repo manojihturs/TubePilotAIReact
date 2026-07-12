@@ -19,7 +19,7 @@ interface QuickActionPanelProps {
 const getColorClasses = (color: string) => {
   switch (color) {
     case 'blue':
-      return 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30';
+      return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30';
     case 'purple':
       return 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30';
     case 'green':
@@ -27,7 +27,7 @@ const getColorClasses = (color: string) => {
     case 'pink':
       return 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900/30';
     default:
-      return 'bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400';
+      return 'bg-slate-50 dark:bg-slate-900/20 text-slate-600 dark:text-slate-400';
   }
 };
 
@@ -69,11 +69,11 @@ export function QuickActionPanel({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 animate-pulse">
-        <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-6" />
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 animate-pulse">
+        <div className="h-6 w-40 bg-slate-200 dark:bg-slate-700 rounded mb-6" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+            <div key={i} className="h-32 bg-slate-200 dark:bg-slate-700 rounded-lg" />
           ))}
         </div>
       </div>
@@ -89,19 +89,19 @@ export function QuickActionPanel({
           return (
             <div
               key={stat.label}
-              className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4"
+              className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-4"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">
                     {stat.label}
                   </p>
-                  <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  <p className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">
                     {stat.value}
                   </p>
                 </div>
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <Icon size={20} className="text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                  <Icon size={20} className="text-indigo-600 dark:text-indigo-400" />
                 </div>
               </div>
             </div>
@@ -110,12 +110,12 @@ export function QuickActionPanel({
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+      <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-slate-200 dark:border-slate-800">
+          <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
             Quick Actions
           </h3>
-          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Get started with common tasks
           </p>
         </div>
@@ -153,26 +153,26 @@ export function QuickActionPanel({
         </div>
 
         {/* Suggested Next Steps */}
-        <div className="p-4 md:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-t border-gray-200 dark:border-gray-800">
-          <h4 className="font-semibold text-sm md:text-base text-gray-900 dark:text-white mb-2">
+        <div className="p-4 md:p-6 bg-gradient-to-r from-indigo-50 to-indigo-50 dark:from-indigo-900/20 dark:to-indigo-900/20 border-t border-slate-200 dark:border-slate-800">
+          <h4 className="font-semibold text-sm md:text-base text-slate-900 dark:text-white mb-2">
             💡 Suggested Next Steps
           </h4>
-          <ul className="space-y-2 text-xs md:text-sm text-gray-700 dark:text-gray-300">
+          <ul className="space-y-2 text-xs md:text-sm text-slate-700 dark:text-slate-300">
             {totalPrompts === 0 && (
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 dark:text-blue-400 font-bold">→</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold">→</span>
                 <span>Create your first prompt to start generating content</span>
               </li>
             )}
             {totalCategories === 0 && (
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 dark:text-blue-400 font-bold">→</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold">→</span>
                 <span>Organize content by creating categories (e.g., "Video Titles", "Instagram Captions")</span>
               </li>
             )}
             {totalVariables === 0 && (
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 dark:text-blue-400 font-bold">→</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold">→</span>
                 <span>Define variables to make your prompts dynamic and reusable</span>
               </li>
             )}
