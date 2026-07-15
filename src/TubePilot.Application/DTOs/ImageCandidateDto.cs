@@ -42,5 +42,34 @@ namespace TubePilot.Application.DTOs
         public Dictionary<string, string> Data { get; set; } = new();
         public string ImageStatus { get; set; } = null!;
         public string? ConfirmedImagePath { get; set; }
+        public bool IsVideoClip { get; set; }
+    }
+
+    public class VideoClipCandidateDto
+    {
+        public string PreviewImageUrl { get; set; } = null!;
+        public string DownloadUrl { get; set; } = null!;
+        public string SourceUrl { get; set; } = null!;
+        public string License { get; set; } = null!;
+        public double DurationSeconds { get; set; }
+    }
+
+    public class VideoClipCandidatesResponseDto
+    {
+        public Guid RowId { get; set; }
+        public string Query { get; set; } = null!;
+        public List<VideoClipCandidateDto> Candidates { get; set; } = new();
+    }
+
+    public class VideoClipSelectRequest
+    {
+        public string DownloadUrl { get; set; } = null!;
+    }
+
+    public class TextOutputDto
+    {
+        public Guid Id { get; set; }
+        public string OutputItemName { get; set; } = null!;
+        public string Content { get; set; } = null!;
     }
 }

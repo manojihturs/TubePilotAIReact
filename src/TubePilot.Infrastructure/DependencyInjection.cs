@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TubePilot.Application.Interfaces;
+using TubePilot.Domain.Entities;
 using TubePilot.Infrastructure.Data;
 using TubePilot.Infrastructure.Repositories;
 using TubePilot.Infrastructure.Services;
@@ -28,16 +29,20 @@ namespace TubePilot.Infrastructure
             services.AddDataProtection();
             services.AddScoped<IApiKeyEncryptionService, ApiKeyEncryptionService>();
 
-            services.AddHttpClient<ClaudeProvider>();
-            services.AddKeyedScoped<IAiProvider>("Claude", (sp, _) => sp.GetRequiredService<ClaudeProvider>());
+            // Fixed set of wire-format adapters (how to talk HTTP), not a fixed set of
+            // vendors (who to talk to) — users define their own named AiTool rows pointing
+            // any base URL/model/key at one of these three formats.
+            services.AddHttpClient<AnthropicMessagesAdapter>();
+            services.AddKeyedScoped<IAiFormatAdapter>(AiApiFormats.AnthropicMessages, (sp, _) => sp.GetRequiredService<AnthropicMessagesAdapter>());
 
-            services.AddHttpClient<GroqProvider>();
-            services.AddKeyedScoped<IAiProvider>("Groq", (sp, _) => sp.GetRequiredService<GroqProvider>());
+            services.AddHttpClient<OpenAiChatAdapter>();
+            services.AddKeyedScoped<IAiFormatAdapter>(AiApiFormats.OpenAiChat, (sp, _) => sp.GetRequiredService<OpenAiChatAdapter>());
 
-            services.AddHttpClient<GeminiProvider>();
-            services.AddKeyedScoped<IAiProvider>("Gemini", (sp, _) => sp.GetRequiredService<GeminiProvider>());
+            services.AddHttpClient<GeminiAdapter>();
+            services.AddKeyedScoped<IAiFormatAdapter>(AiApiFormats.Gemini, (sp, _) => sp.GetRequiredService<GeminiAdapter>());
 
-            services.AddScoped<IAiProviderFactory, AiProviderFactory>();
+            services.AddScoped<IAiFormatAdapterFactory, AiFormatAdapterFactory>();
+            services.AddScoped<IAiToolRepository, AiToolRepository>();
 
             services.AddScoped<IProjectRepository, ProjectRepository>();
             services.AddScoped<IPromptVersionRepository, PromptVersionRepository>();
@@ -46,11 +51,19 @@ namespace TubePilot.Infrastructure
             services.AddScoped<IGenerationRecordRepository, GenerationRecordRepository>();
             services.AddScoped<IFileSystemService, FileSystemService>();
 
-            services.AddHttpClient<WikimediaImageSearchProvider>();
-            services.AddScoped<IImageSearchProvider, WikimediaImageSearchProvider>();
+            // Real-photo search: Wikipedia article lead images first, Wikimedia Commons fallback.
+            services.AddHttpClient<WikipediaImageSearchProvider>();
+            services.AddScoped<IImageSearchProvider, WikipediaImageSearchProvider>();
 
             services.AddHttpClient<PollinationsImageProvider>();
             services.AddScoped<IImageGenerationProvider, PollinationsImageProvider>();
+
+            // Real stock-footage clip search — free user-supplied API key, genuine motion video.
+            services.AddHttpClient<PexelsVideoProvider>();
+            services.AddKeyedScoped<IVideoClipSearchProvider>("Pexels", (sp, _) => sp.GetRequiredService<PexelsVideoProvider>());
+            services.AddHttpClient<PixabayVideoProvider>();
+            services.AddKeyedScoped<IVideoClipSearchProvider>("Pixabay", (sp, _) => sp.GetRequiredService<PixabayVideoProvider>());
+            services.AddScoped<IVideoClipProviderFactory, VideoClipProviderFactory>();
 
             services.AddScoped<IRenderJobRepository, RenderJobRepository>();
             services.AddHttpClient<GoogleTranslateTtsProvider>();

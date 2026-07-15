@@ -21,9 +21,9 @@ namespace TubePilot.API.Controllers
         private readonly IProjectOutputRepository _outputRepo;
         private readonly IDataRowRepository _dataRowRepo;
         private readonly IGenerationRecordRepository _generationRecordRepo;
-        private readonly IUserApiKeyRepository _apiKeyRepo;
+        private readonly IAiToolRepository _aiToolRepo;
         private readonly IApiKeyEncryptionService _encryption;
-        private readonly IAiProviderFactory _providerFactory;
+        private readonly IAiFormatAdapterFactory _adapterFactory;
         private readonly IFileSystemService _fileSystem;
         private readonly IPromptRepository _promptRepo;
 
@@ -32,9 +32,9 @@ namespace TubePilot.API.Controllers
             IProjectOutputRepository outputRepo,
             IDataRowRepository dataRowRepo,
             IGenerationRecordRepository generationRecordRepo,
-            IUserApiKeyRepository apiKeyRepo,
+            IAiToolRepository aiToolRepo,
             IApiKeyEncryptionService encryption,
-            IAiProviderFactory providerFactory,
+            IAiFormatAdapterFactory adapterFactory,
             IFileSystemService fileSystem,
             IPromptRepository promptRepo)
         {
@@ -42,9 +42,9 @@ namespace TubePilot.API.Controllers
             _outputRepo = outputRepo;
             _dataRowRepo = dataRowRepo;
             _generationRecordRepo = generationRecordRepo;
-            _apiKeyRepo = apiKeyRepo;
+            _aiToolRepo = aiToolRepo;
             _encryption = encryption;
-            _providerFactory = providerFactory;
+            _adapterFactory = adapterFactory;
             _fileSystem = fileSystem;
             _promptRepo = promptRepo;
         }
@@ -79,16 +79,34 @@ namespace TubePilot.API.Controllers
             var spec = JsonSerializer.Deserialize<OutputSpec>(project.OutputSpecJson, OutputSpecJsonOptions.Default)
                 ?? new OutputSpec();
 
-            var savedKey = await _apiKeyRepo.GetAsync(userId, request.ProviderName, cancellationToken);
-            if (savedKey == null)
+            // Fallback order: the user's own AI tools, in ascending Priority — with an
+            // optionally-preferred tool moved to the front. Every tool is user-defined (name,
+            // wire format, base URL, model, key); nothing here is hardcoded to a vendor. A
+            // transient failure on one item (rate limit, invalid key, brief outage) tries the
+            // next enabled tool instead of aborting the whole project's generation.
+            var enabledTools = await _aiToolRepo.GetEnabledForUserOrderedAsync(userId, cancellationToken);
+            if (request.PreferredAiToolId is Guid preferredId)
             {
-                return BadRequest(new ApiResponse<string> { Success = false, Message = $"No saved API key for provider '{request.ProviderName}'." });
+                var preferred = enabledTools.FirstOrDefault(t => t.Id == preferredId);
+                if (preferred != null)
+                {
+                    enabledTools.Remove(preferred);
+                    enabledTools.Insert(0, preferred);
+                }
             }
-            var apiKey = _encryption.Decrypt(savedKey.EncryptedKey);
-            var provider = _providerFactory.GetProvider(request.ProviderName);
+
+            if (enabledTools.Count == 0)
+            {
+                return BadRequest(new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = "No enabled AI tools connected. Add at least one AI tool (name, API key, and base URL) in Settings before generating."
+                });
+            }
 
             var filledPrompt = FillTopic(prompt.PromptText, project.Title);
             var result = new GenerateResultDto { ProjectId = project.Id };
+            var toolsActuallyUsed = new HashSet<Guid>();
 
             foreach (var item in spec.Items)
             {
@@ -99,33 +117,52 @@ namespace TubePilot.API.Controllers
                 }
 
                 var systemPrompt = BuildScopedSystemPrompt(item);
-                var aiRequest = new AiRequest(
-                    SystemPrompt: systemPrompt,
-                    UserPrompt: filledPrompt,
-                    Model: request.Model ?? string.Empty,
-                    Temperature: 0.7f,
-                    MaxTokens: 2048
-                );
 
-                AiResponse aiResponse;
-                try
+                AiResponse? aiResponse = null;
+                string? toolNameUsed = null;
+                var attemptFailures = new List<string>();
+
+                foreach (var tool in enabledTools)
                 {
-                    aiResponse = await provider.GenerateAsync(apiKey, aiRequest, cancellationToken);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    return StatusCode(StatusCodes.Status502BadGateway, new ApiResponse<string>
+                    try
                     {
-                        Success = false,
-                        Message = $"Generation failed for '{item.Name}': {ex.Message}"
-                    });
+                        var apiKey = _encryption.Decrypt(tool.EncryptedApiKey);
+                        var adapter = _adapterFactory.GetAdapter(tool.ApiFormat);
+                        var toolRequest = new AiRequest(
+                            SystemPrompt: systemPrompt,
+                            UserPrompt: filledPrompt,
+                            Model: tool.Model,
+                            Temperature: 0.7f,
+                            // Raised from 2048 so a long, uncapped ranking (20-30+ items) isn't
+                            // truncated mid-JSON — the table item no longer limits its own length.
+                            MaxTokens: 4096
+                        );
+                        aiResponse = await adapter.GenerateAsync(tool.BaseUrl, apiKey, tool.Model, toolRequest, cancellationToken);
+                        toolNameUsed = tool.Name;
+                        toolsActuallyUsed.Add(tool.Id);
+                        break;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        attemptFailures.Add($"{tool.Name}: {ex.Message}");
+                    }
+                }
+
+                if (aiResponse == null)
+                {
+                    // Every connected tool failed for this one item — skip it, but keep
+                    // generating the rest of the project rather than aborting outright.
+                    result.Warnings.Add(
+                        $"Could not generate '{item.Name}' — every enabled AI tool failed. " +
+                        $"Tried: {string.Join(" | ", attemptFailures)}");
+                    continue;
                 }
 
                 await _generationRecordRepo.AddAsync(new GenerationRecord
                 {
                     ProjectId = project.Id,
                     OutputItemName = item.Name,
-                    ProviderUsed = aiResponse.ProviderName,
+                    ProviderUsed = toolNameUsed ?? aiResponse.ProviderName,
                     ModelUsed = aiResponse.Model,
                     InputTokens = aiResponse.InputTokens,
                     OutputTokens = aiResponse.OutputTokens
@@ -143,11 +180,8 @@ namespace TubePilot.API.Controllers
                     }
                     catch (JsonException ex)
                     {
-                        return StatusCode(StatusCodes.Status502BadGateway, new ApiResponse<string>
-                        {
-                            Success = false,
-                            Message = $"AI response for '{item.Name}' was not valid structured JSON: {ex.Message}"
-                        });
+                        result.Warnings.Add($"'{item.Name}' came back from {aiResponse.ProviderName} as invalid structured data and was skipped: {ex.Message}");
+                        continue;
                     }
 
                     filePath = _fileSystem.WriteOutputItem(project.FolderPath, item, rows);
@@ -197,7 +231,22 @@ namespace TubePilot.API.Controllers
                 });
             }
 
-            await _apiKeyRepo.TouchLastUsedAsync(userId, request.ProviderName, cancellationToken);
+            foreach (var toolId in toolsActuallyUsed)
+            {
+                await _aiToolRepo.TouchLastUsedAsync(toolId, cancellationToken);
+            }
+
+            if (result.Outputs.Count == 0)
+            {
+                // Nothing at all could be generated — every item failed on every enabled tool.
+                // This is the only case that still fails the whole request.
+                return StatusCode(StatusCodes.Status502BadGateway, new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = "Generation failed for every part of this project across all enabled AI tools " +
+                               $"({string.Join(", ", enabledTools.Select(t => t.Name))}). Details: {string.Join(" || ", result.Warnings)}"
+                });
+            }
 
             return Ok(new ApiResponse<GenerateResultDto> { Success = true, Data = result });
         }
@@ -218,7 +267,8 @@ namespace TubePilot.API.Controllers
                        $"\"{item.Name}\" — ignore instructions relating to any other named part. " +
                        "You must respond with ONLY a raw JSON array of objects — no markdown, no code fences, no explanation before or after. " +
                        $"Each object must have exactly these keys: {columns}. " +
-                       "Generate a realistic, well-researched set of items (aim for 8-10) for the topic given by the user.";
+                       "Include as many genuinely notable, factual items as the topic supports — do not artificially limit the count " +
+                       "(a comprehensive list is typically 15-30 items, more if the topic warrants it), ordered from most to least significant.";
             }
 
             return $"The prompt below may describe several distinct pieces of content. You are generating ONLY the part named " +

@@ -20,6 +20,7 @@ namespace TubePilot.Infrastructure.Data
         public DbSet<TubePilot.Domain.Entities.DataRow> DataRows => Set<TubePilot.Domain.Entities.DataRow>();
         public DbSet<TubePilot.Domain.Entities.GenerationRecord> GenerationRecords => Set<TubePilot.Domain.Entities.GenerationRecord>();
         public DbSet<TubePilot.Domain.Entities.RenderJob> RenderJobs => Set<TubePilot.Domain.Entities.RenderJob>();
+        public DbSet<TubePilot.Domain.Entities.AiTool> AiTools => Set<TubePilot.Domain.Entities.AiTool>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -46,6 +47,7 @@ namespace TubePilot.Infrastructure.Data
             modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.DataRowConfiguration());
             modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.GenerationRecordConfiguration());
             modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.RenderJobConfiguration());
+            modelBuilder.ApplyConfiguration(new TubePilot.Infrastructure.Data.Configurations.AiToolConfiguration());
         }
     }
 }

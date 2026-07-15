@@ -24,6 +24,7 @@ export interface GeneratedOutput {
 export interface GenerateResult {
   projectId: string;
   outputs: GeneratedOutput[];
+  warnings: string[];
 }
 
 export interface DataRow {
@@ -34,6 +35,7 @@ export interface DataRow {
   data: Record<string, string>;
   imageStatus: 'NotRequired' | 'Pending' | 'CandidatesFetched' | 'Confirmed';
   confirmedImagePath?: string | null;
+  isVideoClip: boolean;
 }
 
 export interface ImageCandidate {
@@ -47,6 +49,26 @@ export interface ImageCandidatesResult {
   rowId: string;
   query: string;
   candidates: ImageCandidate[];
+}
+
+export interface VideoClipCandidate {
+  previewImageUrl: string;
+  downloadUrl: string;
+  sourceUrl: string;
+  license: string;
+  durationSeconds: number;
+}
+
+export interface VideoClipCandidatesResult {
+  rowId: string;
+  query: string;
+  candidates: VideoClipCandidate[];
+}
+
+export interface TextOutput {
+  id: string;
+  outputItemName: string;
+  content: string;
 }
 
 export interface RenderJob {
@@ -83,13 +105,18 @@ class ProjectService {
     return response.data;
   }
 
-  async generate(projectId: string, providerName: string, model?: string): Promise<GenerateResult> {
-    const response = await apiClient.post<GenerateResult>('/generate', { projectId, providerName, model });
+  async generate(projectId: string, preferredAiToolId?: string): Promise<GenerateResult> {
+    const response = await apiClient.post<GenerateResult>('/generate', { projectId, preferredAiToolId });
     return response.data;
   }
 
   async getRows(projectId: string): Promise<DataRow[]> {
     const response = await apiClient.get<DataRow[]>(`/projects/${projectId}/rows`);
+    return response.data;
+  }
+
+  async getTextOutputs(projectId: string): Promise<TextOutput[]> {
+    const response = await apiClient.get<TextOutput[]>(`/projects/${projectId}/text-outputs`);
     return response.data;
   }
 
@@ -118,6 +145,43 @@ class ProjectService {
     const response = await apiClient.post<DataRow>(
       `/projects/${projectId}/rows/${rowId}/image-generate`,
       { prompt }
+    );
+    return response.data;
+  }
+
+  // Searches a free source (Wikipedia lead image → Wikimedia Commons) and auto-confirms the
+  // top real photo. Returns the row unchanged (still not Confirmed) when nothing is found.
+  async autoFetchRowImage(projectId: string, rowId: string): Promise<DataRow> {
+    const response = await apiClient.post<DataRow>(
+      `/projects/${projectId}/rows/${rowId}/image-auto`,
+      {}
+    );
+    return response.data;
+  }
+
+  async getClipCandidates(projectId: string, rowId: string, query?: string): Promise<VideoClipCandidatesResult> {
+    const response = await apiClient.post<VideoClipCandidatesResult>(
+      `/projects/${projectId}/rows/${rowId}/clip-candidates`,
+      { query }
+    );
+    return response.data;
+  }
+
+  async selectClip(projectId: string, rowId: string, downloadUrl: string): Promise<DataRow> {
+    const response = await apiClient.post<DataRow>(
+      `/projects/${projectId}/rows/${rowId}/clip-select`,
+      { downloadUrl }
+    );
+    return response.data;
+  }
+
+  // Searches every connected footage provider (Pexels, Pixabay) and auto-confirms the top
+  // real motion-video clip. Returns the row unchanged (still not Confirmed) when nothing is
+  // found or no footage provider key is connected.
+  async autoFetchRowClip(projectId: string, rowId: string): Promise<DataRow> {
+    const response = await apiClient.post<DataRow>(
+      `/projects/${projectId}/rows/${rowId}/clip-auto`,
+      {}
     );
     return response.data;
   }

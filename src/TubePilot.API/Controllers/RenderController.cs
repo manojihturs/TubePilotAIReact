@@ -166,9 +166,16 @@ namespace TubePilot.API.Controllers
                 var outputs = await outputRepo.GetForProjectAsync(job.ProjectId);
 
                 // Gather confirmed rows across every Table output, in row order.
-                var scenePaths = new List<string>();
+                // The narration is built from these same rows, in the same order, so the
+                // voiceover names exactly what's on screen at each scene — no divergence from
+                // the separately-written free-form Narration text (which often reorders items).
+                var scenes = new List<VideoScene>();
+                var narrationSegments = new List<string>();
                 var tempDir = Path.Combine(project.FolderPath, "Export", $"_scenes_{job.Id:N}");
                 Directory.CreateDirectory(tempDir);
+
+                var sceneWidth = job.Format == RenderFormat.Shorts ? 1080 : 1920;
+                var sceneHeight = job.Format == RenderFormat.Shorts ? 1920 : 1080;
 
                 var rank = 1;
                 foreach (var output in outputs.Where(o => o.Type == ProjectOutputType.Table))
@@ -179,38 +186,48 @@ namespace TubePilot.API.Controllers
                     {
                         var data = JsonSerializer.Deserialize<Dictionary<string, string>>(row.DataJson, OutputSpecJsonOptions.Default) ?? new();
                         var title = item?.Columns.Count > 0 && data.TryGetValue(item.Columns[0], out var t) ? t : "Untitled";
+                        var keyFact = item?.Columns.Count > 1 && data.TryGetValue(item.Columns[1], out var k) ? k : null;
                         var badge = item?.Columns.Count > 2 && data.TryGetValue(item.Columns[2], out var b) ? b : null;
+                        var overlay = new SceneTextOverlay(rank, title, badge);
 
-                        var scenePath = Path.Combine(tempDir, $"scene-{rank:D3}.jpg");
-                        await sceneComposer.ComposeSceneAsync(
-                            row.ConfirmedImagePath!,
-                            new SceneTextOverlay(rank, title, badge),
-                            job.Language,
-                            scenePath,
-                            job.Format == RenderFormat.Shorts ? 1080 : 1920,
-                            job.Format == RenderFormat.Shorts ? 1920 : 1080);
-                        scenePaths.Add(scenePath);
+                        if (row.IsVideoClip)
+                        {
+                            // Real footage plays as-is (the render pipeline trims/crossfades
+                            // it) — only the transparent rank/title/badge band is pre-rendered
+                            // here, then composited on top of the clip at render time.
+                            var overlayPath = Path.Combine(tempDir, $"scene-{rank:D3}-overlay.png");
+                            await sceneComposer.ComposeTextOverlayAsync(overlay, job.Language, overlayPath, sceneWidth, sceneHeight);
+                            scenes.Add(new VideoScene(row.ConfirmedImagePath!, IsVideoClip: true, TextOverlayPngPath: overlayPath));
+                        }
+                        else
+                        {
+                            var scenePath = Path.Combine(tempDir, $"scene-{rank:D3}.jpg");
+                            await sceneComposer.ComposeSceneAsync(row.ConfirmedImagePath!, overlay, job.Language, scenePath, sceneWidth, sceneHeight);
+                            scenes.Add(new VideoScene(scenePath, IsVideoClip: false, TextOverlayPngPath: null));
+                        }
+
+                        var segment = $"Number {rank}. {title}.";
+                        if (!string.IsNullOrWhiteSpace(keyFact)) segment += $" {keyFact}.";
+                        if (!string.IsNullOrWhiteSpace(badge)) segment += $" {badge}.";
+                        narrationSegments.Add(segment);
                         rank++;
                     }
                 }
 
-                if (scenePaths.Count == 0)
+                if (scenes.Count == 0)
                 {
-                    throw new InvalidOperationException("No confirmed row images available to render.");
+                    throw new InvalidOperationException("No confirmed row assets available to render.");
                 }
 
-                // Narration: prefer an output literally named "Narration", else the first Text output.
-                var narrationOutput = outputs.FirstOrDefault(o => o.Type == ProjectOutputType.Text && o.OutputItemName.Equals("Narration", StringComparison.OrdinalIgnoreCase))
-                    ?? outputs.FirstOrDefault(o => o.Type == ProjectOutputType.Text);
-                var narrationText = narrationOutput != null && System.IO.File.Exists(narrationOutput.FilePath)
-                    ? await System.IO.File.ReadAllTextAsync(narrationOutput.FilePath)
-                    : string.Join(". ", scenePaths.Select((_, i) => $"Number {i + 1}"));
+                var narrationText = $"{project.Title}. " +
+                    string.Join(" ", narrationSegments) +
+                    " Which one is your favorite? Let us know in the comments.";
 
                 var audioBytes = await tts.SynthesizeAsync(narrationText, job.Language);
                 var musicPath = await backgroundMusic.GetTrackPathAsync(cancellationToken: CancellationToken.None);
 
                 var exportDir = Path.Combine(project.FolderPath, "Export");
-                var outputPath = await videoRendering.RenderAsync(scenePaths, audioBytes, job.Format, job.DurationSeconds, exportDir, musicPath);
+                var outputPath = await videoRendering.RenderAsync(scenes, audioBytes, job.Format, job.DurationSeconds, exportDir, musicPath);
 
                 job.Status = RenderStatus.Complete;
                 job.OutputPath = outputPath;

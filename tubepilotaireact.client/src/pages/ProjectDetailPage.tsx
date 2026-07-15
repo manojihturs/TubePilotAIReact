@@ -13,14 +13,18 @@ import {
   Search,
   Film,
   Clapperboard,
+  Video,
 } from 'lucide-react';
 import {
   projectService,
   aiProviderService,
-  AI_PROVIDERS,
+  aiToolService,
+  FOOTAGE_PROVIDERS,
   toRelativePath,
   type DataRow,
   type ImageCandidate,
+  type VideoClipCandidate,
+  type TextOutput,
   type RenderJob,
 } from '../services';
 import { LoadingSkeleton } from '../components/LoadingCard';
@@ -54,8 +58,9 @@ export function ProjectDetailPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const [providerName, setProviderName] = useState<string>(AI_PROVIDERS[0]);
+  const [preferredAiToolId, setPreferredAiToolId] = useState('');
   const [candidatesByRow, setCandidatesByRow] = useState<Record<string, ImageCandidate[]>>({});
+  const [clipCandidatesByRow, setClipCandidatesByRow] = useState<Record<string, VideoClipCandidate[]>>({});
   const [renderFormat, setRenderFormat] = useState<'Desktop' | 'Shorts'>('Desktop');
   const [renderLanguage, setRenderLanguage] = useState<'en' | 'ta'>('en');
   const [desktopMinutes, setDesktopMinutes] = useState(1);
@@ -72,9 +77,19 @@ export function ProjectDetailPage() {
     queryFn: () => aiProviderService.getKeys(),
   });
 
+  const { data: aiTools = [] } = useQuery({
+    queryKey: ['ai-tools'],
+    queryFn: () => aiToolService.getAll(),
+  });
+
   const { data: rows = [], isLoading: rowsLoading } = useQuery({
     queryKey: ['project-rows', projectId],
     queryFn: () => projectService.getRows(projectId),
+  });
+
+  const { data: textOutputs = [], isLoading: textOutputsLoading } = useQuery({
+    queryKey: ['project-text-outputs', projectId],
+    queryFn: () => projectService.getTextOutputs(projectId),
   });
 
   const { data: readyForVideo = false } = useQuery({
@@ -99,20 +114,26 @@ export function ProjectDetailPage() {
     },
   });
 
-  const hasKey = keys.some((k) => k.providerName === providerName);
+  const hasEnabledAiTool = aiTools.some((t) => t.isEnabled);
+  const hasFootageKey = keys.some((k) => (FOOTAGE_PROVIDERS as readonly string[]).includes(k.providerName));
   const relativeThumbnailPath = project?.thumbnailPath && project.folderPath
     ? toRelativePath(project.thumbnailPath, project.folderPath)
     : null;
   const thumbnailUrl = useObjectUrl(projectId, relativeThumbnailPath);
 
   const generateMutation = useMutation({
-    mutationFn: () => projectService.generate(projectId, providerName),
+    mutationFn: () => projectService.generate(projectId, preferredAiToolId || undefined),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['project-rows', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-text-outputs', projectId] });
       queryClient.invalidateQueries({ queryKey: ['ready-for-video', projectId] });
       const rowTotal = result.outputs.reduce((sum, o) => sum + o.rowCount, 0);
       showToast(`Generated ${result.outputs.length} output(s), ${rowTotal} row(s)`, 'success');
       logActivity({ action: 'create', entity: 'Generation', label: `Generated content for project "${project?.title}"`, status: 'success' });
+      if (result.warnings.length > 0) {
+        result.warnings.forEach((w) => showToast(w, 'info'));
+        logActivity({ action: 'create', entity: 'Generation', label: `Some parts skipped for project "${project?.title}"`, status: 'error', detail: result.warnings.join(' | ') });
+      }
     },
     onError: (err: unknown) => {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Generation failed';
@@ -170,9 +191,9 @@ export function ProjectDetailPage() {
     },
   });
 
-  const generateImageMutation = useMutation({
-    mutationFn: (rowId: string) => projectService.generateRowImage(projectId, rowId),
-    onSuccess: (_row, rowId) => {
+  const autoFetchImageMutation = useMutation({
+    mutationFn: (rowId: string) => projectService.autoFetchRowImage(projectId, rowId),
+    onSuccess: (row, rowId) => {
       queryClient.invalidateQueries({ queryKey: ['project-rows', projectId] });
       queryClient.invalidateQueries({ queryKey: ['ready-for-video', projectId] });
       setCandidatesByRow((prev) => {
@@ -180,13 +201,77 @@ export function ProjectDetailPage() {
         delete next[rowId];
         return next;
       });
-      showToast('AI image generated and confirmed', 'success');
-      logActivity({ action: 'create', entity: 'DataRow', label: 'Generated AI image for row', status: 'success' });
+      if (row.imageStatus === 'Confirmed') {
+        showToast('Real photo fetched and confirmed', 'success');
+      } else {
+        showToast('No free photo found — try "Find Real Photo" to search manually', 'info');
+      }
+      logActivity({ action: 'update', entity: 'DataRow', label: 'Auto-fetched real photo for row', status: 'success' });
     },
     onError: (err: unknown) => {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Image generation failed';
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Photo fetch failed';
       showToast(message, 'error');
-      logActivity({ action: 'create', entity: 'DataRow', label: 'Generate AI image for row', status: 'error', detail: message });
+      logActivity({ action: 'update', entity: 'DataRow', label: 'Auto-fetch real photo for row', status: 'error', detail: message });
+    },
+  });
+
+  const clipCandidatesMutation = useMutation({
+    mutationFn: (rowId: string) => projectService.getClipCandidates(projectId, rowId),
+    onSuccess: (result) => {
+      setClipCandidatesByRow((prev) => ({ ...prev, [result.rowId]: result.candidates }));
+      queryClient.invalidateQueries({ queryKey: ['project-rows', projectId] });
+      if (result.candidates.length === 0) {
+        showToast(`No video clips found for "${result.query}"`, 'info');
+      }
+    },
+    onError: (err: unknown) => {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch video clip candidates';
+      showToast(message, 'error');
+      logActivity({ action: 'create', entity: 'ClipCandidates', label: 'Fetch clip candidates', status: 'error', detail: String(err) });
+    },
+  });
+
+  const selectClipMutation = useMutation({
+    mutationFn: ({ rowId, downloadUrl }: { rowId: string; downloadUrl: string }) =>
+      projectService.selectClip(projectId, rowId, downloadUrl),
+    onSuccess: (_row, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['project-rows', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['ready-for-video', projectId] });
+      setClipCandidatesByRow((prev) => {
+        const next = { ...prev };
+        delete next[variables.rowId];
+        return next;
+      });
+      showToast('Video clip confirmed', 'success');
+      logActivity({ action: 'update', entity: 'DataRow', label: 'Confirmed row clip', status: 'success' });
+    },
+    onError: (err: unknown) => {
+      showToast('Failed to confirm video clip', 'error');
+      logActivity({ action: 'update', entity: 'DataRow', label: 'Confirm row clip', status: 'error', detail: String(err) });
+    },
+  });
+
+  const autoFetchClipMutation = useMutation({
+    mutationFn: (rowId: string) => projectService.autoFetchRowClip(projectId, rowId),
+    onSuccess: (row, rowId) => {
+      queryClient.invalidateQueries({ queryKey: ['project-rows', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['ready-for-video', projectId] });
+      setClipCandidatesByRow((prev) => {
+        const next = { ...prev };
+        delete next[rowId];
+        return next;
+      });
+      if (row.imageStatus === 'Confirmed') {
+        showToast('Real video clip fetched and confirmed', 'success');
+      } else {
+        showToast('No free clip found — try "Find Clip" to search manually', 'info');
+      }
+      logActivity({ action: 'update', entity: 'DataRow', label: 'Auto-fetched real clip for row', status: 'success' });
+    },
+    onError: (err: unknown) => {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Clip fetch failed';
+      showToast(message, 'error');
+      logActivity({ action: 'update', entity: 'DataRow', label: 'Auto-fetch real clip for row', status: 'error', detail: message });
     },
   });
 
@@ -251,11 +336,11 @@ export function ProjectDetailPage() {
             {/* Generate panel */}
             <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6">
               <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Generate Content</h2>
-              {!hasKey && (
+              {!hasEnabledAiTool && (
                 <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-lg p-3 mb-4">
                   <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800 dark:text-amber-300">
-                    No {providerName} API key connected.{' '}
+                    No AI tool connected.{' '}
                     <Link to="/api-keys" className="font-semibold underline inline-flex items-center gap-1">
                       <KeyRound size={14} /> Add one first
                     </Link>
@@ -264,19 +349,20 @@ export function ProjectDetailPage() {
               )}
               <div className="flex flex-col sm:flex-row gap-3">
                 <select
-                  value={providerName}
-                  onChange={(e) => setProviderName(e.target.value)}
+                  value={preferredAiToolId}
+                  onChange={(e) => setPreferredAiToolId(e.target.value)}
                   className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  {AI_PROVIDERS.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
+                  <option value="">Auto (priority order)</option>
+                  {aiTools.filter((t) => t.isEnabled).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
                     </option>
                   ))}
                 </select>
                 <button
                   onClick={() => generateMutation.mutate()}
-                  disabled={generateMutation.isPending || !hasKey}
+                  disabled={generateMutation.isPending || !hasEnabledAiTool}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
                 >
                   {generateMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
@@ -332,19 +418,45 @@ export function ProjectDetailPage() {
                     candidates={candidatesByRow[row.id]}
                     isFetching={candidatesMutation.isPending && candidatesMutation.variables === row.id}
                     isSelecting={selectImageMutation.isPending && selectImageMutation.variables?.rowId === row.id}
-                    isGenerating={generateImageMutation.isPending && generateImageMutation.variables === row.id}
+                    isFetchingPhoto={autoFetchImageMutation.isPending && autoFetchImageMutation.variables === row.id}
                     onFetchCandidates={() => candidatesMutation.mutate(row.id)}
                     onSelect={(url) => selectImageMutation.mutate({ rowId: row.id, fullSizeUrl: url })}
-                    onGenerate={() => generateImageMutation.mutate(row.id)}
+                    onAutoFetch={() => autoFetchImageMutation.mutate(row.id)}
+                    hasFootageKey={hasFootageKey}
+                    clipCandidates={clipCandidatesByRow[row.id]}
+                    isFetchingClips={clipCandidatesMutation.isPending && clipCandidatesMutation.variables === row.id}
+                    isSelectingClip={selectClipMutation.isPending && selectClipMutation.variables?.rowId === row.id}
+                    isFetchingClip={autoFetchClipMutation.isPending && autoFetchClipMutation.variables === row.id}
+                    onFetchClipCandidates={() => clipCandidatesMutation.mutate(row.id)}
+                    onSelectClip={(url) => selectClipMutation.mutate({ rowId: row.id, downloadUrl: url })}
+                    onAutoFetchClip={() => autoFetchClipMutation.mutate(row.id)}
                   />
                 ))}
               </div>
             </div>
-          ) : rows.length === 0 ? (
+          ) : rows.length === 0 && textOutputs.length === 0 && !textOutputsLoading ? (
             <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-12 text-center text-slate-500 dark:text-slate-400">
               No content generated yet — click Generate above to produce this project's rows and text.
             </div>
           ) : null}
+
+          {/* Text-only outputs (narration, captions, or a whole no-prompt generic project) —
+              these never produce reviewable DataRows, so they need their own preview. */}
+          {textOutputs.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6">
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Generated Text</h2>
+              <div className="space-y-4">
+                {textOutputs.map((output) => (
+                  <div key={output.id}>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-500 mb-1.5">{output.outputItemName}</p>
+                    <pre className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 rounded-lg p-4 font-mono max-h-96 overflow-auto">
+                      {output.content || '(empty)'}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Render video */}
           {readyForVideo && (
@@ -487,21 +599,38 @@ function RowImageReview({
   candidates,
   isFetching,
   isSelecting,
-  isGenerating,
+  isFetchingPhoto,
   onFetchCandidates,
   onSelect,
-  onGenerate,
+  onAutoFetch,
+  hasFootageKey,
+  clipCandidates,
+  isFetchingClips,
+  isSelectingClip,
+  isFetchingClip,
+  onFetchClipCandidates,
+  onSelectClip,
+  onAutoFetchClip,
 }: {
   row: DataRow;
   candidates?: ImageCandidate[];
   isFetching: boolean;
   isSelecting: boolean;
-  isGenerating: boolean;
+  isFetchingPhoto: boolean;
   onFetchCandidates: () => void;
   onSelect: (url: string) => void;
-  onGenerate: () => void;
+  onAutoFetch: () => void;
+  hasFootageKey: boolean;
+  clipCandidates?: VideoClipCandidate[];
+  isFetchingClips: boolean;
+  isSelectingClip: boolean;
+  isFetchingClip: boolean;
+  onFetchClipCandidates: () => void;
+  onSelectClip: (url: string) => void;
+  onAutoFetchClip: () => void;
 }) {
   const label = Object.values(row.data)[0] ?? `Row ${row.rowIndex + 1}`;
+  const anyBusy = isFetching || isFetchingPhoto || isFetchingClips || isFetchingClip;
 
   return (
     <div className="border border-slate-200 dark:border-slate-800 rounded-lg p-4">
@@ -514,31 +643,81 @@ function RowImageReview({
         </div>
         {row.imageStatus === 'Confirmed' ? (
           <span className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400">
-            <CheckCircle2 size={14} /> Confirmed
+            {row.isVideoClip ? <Video size={14} /> : <CheckCircle2 size={14} />}
+            {row.isVideoClip ? 'Confirmed (video clip)' : 'Confirmed'}
           </span>
-        ) : (
-          <div className="flex-shrink-0 flex items-center gap-2">
+        ) : null}
+      </div>
+
+      {row.imageStatus !== 'Confirmed' && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-500 w-16 flex-shrink-0">Clip</span>
             <button
-              onClick={onGenerate}
-              disabled={isGenerating || isFetching}
+              onClick={onAutoFetchClip}
+              disabled={anyBusy || !hasFootageKey}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50"
-              title="Generate a relevant AI image for this row — works even when real-photo search finds nothing"
+              title={hasFootageKey ? 'Fetch the best real video clip for this row (Pexels/Pixabay)' : 'Add a free Pexels or Pixabay API key in Settings to fetch video clips'}
             >
-              {isGenerating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              AI Image
+              {isFetchingClip ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
+              Get Clip
+            </button>
+            <button
+              onClick={onFetchClipCandidates}
+              disabled={anyBusy || !hasFootageKey}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50"
+              title={hasFootageKey ? 'Browse and manually pick a real video clip' : 'Add a free Pexels or Pixabay API key in Settings to browse video clips'}
+            >
+              {isFetchingClips ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              {clipCandidates ? 'Refresh' : 'Find Clip'}
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-500 w-16 flex-shrink-0">Photo</span>
+            <button
+              onClick={onAutoFetch}
+              disabled={anyBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
+              title="Fetch the best real photo for this row from a free source (Wikipedia / Wikimedia Commons)"
+            >
+              {isFetchingPhoto ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+              Get Photo
             </button>
             <button
               onClick={onFetchCandidates}
-              disabled={isFetching || isGenerating}
+              disabled={anyBusy}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors disabled:opacity-50"
-              title="Search Wikimedia for a real photo"
+              title="Browse and manually pick a real photo"
             >
               {isFetching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
               {candidates ? 'Refresh' : 'Find Real Photo'}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {clipCandidates && row.imageStatus !== 'Confirmed' && (
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-3">
+          {clipCandidates.length === 0 && (
+            <p className="col-span-full text-sm text-slate-500 dark:text-slate-500">No video clips found for this row.</p>
+          )}
+          {clipCandidates.map((c) => (
+            <button
+              key={c.downloadUrl}
+              onClick={() => onSelectClip(c.downloadUrl)}
+              disabled={isSelectingClip}
+              className="group relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-colors disabled:opacity-50"
+              title={`${c.license} · ${Math.round(c.durationSeconds)}s`}
+            >
+              <img src={c.previewImageUrl} alt="" className="w-full h-full object-cover" />
+              <div className="absolute top-1 right-1 bg-black/60 rounded-full p-1">
+                <Video size={10} className="text-white" />
+              </div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+            </button>
+          ))}
+        </div>
+      )}
 
       {candidates && row.imageStatus !== 'Confirmed' && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-3">

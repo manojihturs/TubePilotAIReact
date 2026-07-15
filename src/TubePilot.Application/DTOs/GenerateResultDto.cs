@@ -13,5 +13,10 @@ namespace TubePilot.Application.DTOs
     {
         public Guid ProjectId { get; set; }
         public List<GeneratedOutputDto> Outputs { get; set; } = new();
+
+        // Per-item failures that survived every connected provider fallback — the item was
+        // skipped, but everything else in the project still generated. Empty when everything
+        // succeeded (on the first try or after falling back).
+        public List<string> Warnings { get; set; } = new();
     }
 }

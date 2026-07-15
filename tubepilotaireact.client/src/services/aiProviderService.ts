@@ -11,22 +11,11 @@ export interface SaveApiKeyDto {
   apiKey: string;
 }
 
-export interface GenerateRequestDto {
-  title?: string;
-  prompt: string;
-  providerName: string;
-  model?: string;
-}
-
-export interface GenerateResultDto {
-  content: string;
-  inputTokens: number;
-  outputTokens: number;
-  providerName: string;
-  model: string;
-}
-
-export const AI_PROVIDERS = ['Claude', 'Groq', 'Gemini'] as const;
+// Real stock-footage video search — free API key (no cost), used for real motion video
+// scenes instead of AI-animated photos. Uses the simple UserApiKeys save/list/delete
+// endpoints (one key per named provider) — AI text-generation tools use the richer,
+// fully user-defined AiTool endpoints instead (see aiToolService.ts).
+export const FOOTAGE_PROVIDERS = ['Pexels', 'Pixabay'] as const;
 
 class AiProviderService {
   async getKeys(): Promise<UserApiKeyStatus[]> {
@@ -41,11 +30,6 @@ class AiProviderService {
 
   async deleteKey(providerName: string): Promise<void> {
     await apiClient.delete(`/user/api-keys/${providerName}`);
-  }
-
-  async generate(data: GenerateRequestDto): Promise<GenerateResultDto> {
-    const response = await apiClient.post<GenerateResultDto>('/ai/test-generate', data);
-    return response.data;
   }
 }
 

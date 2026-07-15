@@ -14,6 +14,12 @@ namespace TubePilot.Infrastructure.Services.Video
             ["en"] = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf",
         };
 
+        private static readonly Dictionary<DecorativeFontRole, (string FileName, string Url)> DecorativeFontUrls = new()
+        {
+            [DecorativeFontRole.RankNumber] = ("anton.ttf", "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/Anton-Regular.ttf"),
+            [DecorativeFontRole.Subtitle] = ("bebasneue.ttf", "https://raw.githubusercontent.com/google/fonts/main/ofl/bebasneue/BebasNeue-Regular.ttf"),
+        };
+
         private readonly HttpClient _http;
         private readonly string _fontsDir;
         private static readonly SemaphoreSlim DownloadLock = new(1, 1);
@@ -25,12 +31,21 @@ namespace TubePilot.Infrastructure.Services.Video
             _fontsDir = Path.Combine(Path.GetDirectoryName(storageRoot.TrimEnd(Path.DirectorySeparatorChar))!, "Fonts");
         }
 
-        public async Task<string> GetFontPathAsync(string language, CancellationToken cancellationToken = default)
+        public Task<string> GetFontPathAsync(string language, CancellationToken cancellationToken = default)
         {
             var url = FontUrls.GetValueOrDefault(language, FontUrls["en"]);
-            var fileName = $"{language}.ttf";
-            var path = Path.Combine(_fontsDir, fileName);
+            return DownloadAndCacheAsync($"{language}.ttf", url, cancellationToken);
+        }
 
+        public Task<string> GetDecorativeFontPathAsync(DecorativeFontRole role, CancellationToken cancellationToken = default)
+        {
+            var (fileName, url) = DecorativeFontUrls[role];
+            return DownloadAndCacheAsync(fileName, url, cancellationToken);
+        }
+
+        private async Task<string> DownloadAndCacheAsync(string fileName, string url, CancellationToken cancellationToken)
+        {
+            var path = Path.Combine(_fontsDir, fileName);
             if (File.Exists(path)) return path;
 
             await DownloadLock.WaitAsync(cancellationToken);

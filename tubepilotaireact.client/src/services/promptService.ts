@@ -5,6 +5,7 @@ export interface Prompt {
   id: string;
   name: string;
   promptText: string;
+  outputSpecJson?: string | null;
   categoryId: string;
   category?: PromptCategory;
   createdDate?: string;
