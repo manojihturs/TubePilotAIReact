@@ -1,3 +1,6 @@
+using TubePilotAIReact.Server.Comfy;
+using TubePilotAIReact.Server.Storage;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.Configure<ComfyCloudOptions>(builder.Configuration.GetSection(ComfyCloudOptions.SectionName));
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+builder.Services.AddHttpClient<ComfyCloudClient>();
+builder.Services.AddSingleton<WorkflowTemplateLoader>();
+builder.Services.AddSingleton<SceneVideoGenerationService>();
 
 var app = builder.Build();
 

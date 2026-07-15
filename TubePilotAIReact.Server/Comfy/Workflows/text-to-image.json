@@ -1,0 +1,9 @@
+{
+  "_placeholder": "Replace this file with a real 'Export Workflow (API)' JSON from the Comfy Cloud editor. See README.md in this folder.",
+  "6": {
+    "class_type": "PLACEHOLDER_CLIPTextEncode",
+    "inputs": {
+      "text": ""
+    }
+  }
+}
